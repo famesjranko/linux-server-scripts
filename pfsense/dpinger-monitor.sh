@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # ===========================
-# Date: 2023-03-15
+# Date: 2023-03-16
 # ===================================================================================
 # This script was written for pfsense, it checks if the dpinger service is running
 # and restarts it if necessary. If dpinger is down, it will attempt to restart it up
