@@ -266,8 +266,7 @@ EOF
     --restart=$RESTART_POLICY \
     ghcr.io/haveagitgat/tdarr
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -319,8 +318,7 @@ EOF
     --restart=$RESTART_POLICY \
     ghcr.io/linuxserver/bazarr
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -378,8 +376,7 @@ EOF
     --restart=$RESTART_POLICY \
     vaultwarden/server:latest
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -433,8 +430,7 @@ EOF
     --restart=$RESTART_POLICY \
     lscr.io/linuxserver/deluge:latest
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -483,8 +479,7 @@ EOF
     --restart=$RESTART_POLICY \
     linuxserver/jackett
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -550,8 +545,7 @@ EOF
     jellyfin/jellyfin
     #linuxserver/jellyfin
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -603,8 +597,7 @@ EOF
     --restart=$RESTART_POLICY \
     fallenbagel/jellyseerr:latest
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -676,8 +669,7 @@ EOF
     --restart=$RESTART_POLICY \
     mbentley/omada-controller:latest
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -726,8 +718,7 @@ EOF
     --restart=$RESTART_POLICY \
     portainer/portainer-ce
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -776,8 +767,7 @@ EOF
     --restart=$RESTART_POLICY \
     linuxserver/radarr
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -882,8 +872,7 @@ EOF
     #--restart=$RESTART_POLICY \
     #romancin/rutorrent:latest
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -942,8 +931,7 @@ EOF
       echo -e "\t [  FAIL  ]"
   fi
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -993,8 +981,7 @@ EOF
     --restart=$RESTART_POLICY \
     romancin/tinymediamanager:latest-v4
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
@@ -1052,8 +1039,7 @@ EOF
   # INFO: otherwise, use current
   #     linuxserver/qbittorrent
 
-  echo
-  echo "finished."
+  echo -e "\nfinished."
   pause
   clear
 }
