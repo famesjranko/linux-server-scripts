@@ -13,16 +13,19 @@
 # Sharing here in case it is helpful to anyone else who prefers docker-cli to compose.
 # =====================================================================================
 
-## global variables
+## Set global container variables
 PUID='SET PUID'
 PGID='SET PGID'
 TZ='SET/TIMEZONE'
-BITWARDEN_TOKEN=
 RESTART_POLICY='unless-stopped'
 
-# set whether to pause after container build or not (1=yes)
+# Set bitwarden security token
+BITWARDEN_TOKEN=
+
+# Set whether to pause after container build or not (1=yes)
 PAUSE=1
 
+# Set menu options key/value store
 declare -A options=(
   ["1"]="bazarr"
   ["2"]="bitwarden"
@@ -47,6 +50,17 @@ declare -A options=(
 # Create array of default containers
 default_group=("bitwarden" "jackett" "jellyfin" "jellyseerr" "radarr" "sonarr" "omada")
 
+# dir_struct - Display directory structure and permissions
+#
+# Description: 
+#   This function displays the current directory structure and permissions that the script expects. 
+#   It also displays the current timezone and restart policy.
+#
+# Usage: 
+#   This function is called by the main menu when the user selects option "D" or "d".
+#
+# Returns: 
+#   None.
 header() {
   sleep .3
   cat<< "EOF"
@@ -58,6 +72,9 @@ header() {
 EOF
 }
 
+# This function prints out the directory structure, permissions, timezone, and restart policy
+# of the Docker container setup. The information is displayed in a formatted manner, where the
+# directory structure is visualized using ASCII art. 
 dir_struct() {
   clear
   header
@@ -86,6 +103,19 @@ EOF
   clear
 }
 
+# menu - Display the menu of options for the main script
+#
+# Description: 
+#   This function displays the menu of options for the main script. It uses the
+#   global array "options" to display each option as a menu item with a number.
+#   It also includes additional options to update all standard containers, show
+#   the directory structure, and quit the script.
+#
+# Usage:
+#   menu
+#
+# Returns:
+#   None.
 menu() {
   header
   for i in $(echo ${!options[@]} | tr " " "\n" | sort -n); do
@@ -119,6 +149,58 @@ pause() {
   fi
 }
 
+# stop_and_remove_container - Stop and remove a Docker container
+#
+# Description: 
+#   This function stops and removes a Docker container with the given name and ID.
+#   If the container is not present, it will print a message indicating so.
+#
+# Arguments:
+#   container_name - The name of the Docker container to stop and remove.
+#   container_id - The ID of the Docker container to stop and remove.
+#
+# Usage:
+#   stop_and_remove_container "my_container" "123abc"
+#
+# Returns:
+#   None.
+function stop_and_remove_container() {
+    local container_name=$1
+    local container_id=$2
+
+    if [ ! -z "$container_id" ]; then
+        echo -n "Stopping $container_name container... "
+        output=$(docker stop $container_name)
+        if [ "$output" == "$container_name" ]; then
+            echo -e "\t [ SUCCESS ]"
+            echo -n "Removing $container_name container... "
+            output=$(docker rm $container_name)
+            if [ "$output" == "$container_name" ]; then
+                echo -e "\t [ SUCCESS ]"
+            else
+                echo -e "\t [ FAIL ] $output"
+            fi
+        else
+            echo -e "\t [ FAIL ] $output"
+        fi
+    else
+        echo -e "Container $container_name not present..."
+    fi
+}
+
+# tdarr - Update and initialize a Tdarr Docker container
+#
+# Description: 
+#   This function updates and initializes a Tdarr Docker container with the latest
+#   image. It first stops and removes any existing container with the same name,
+#   and then pulls the latest image from the registry. It then initializes a new
+#   container with the given configuration and options.
+#
+# Usage:
+#   tdarr
+#
+# Returns:
+#   None.
 tdarr() {
 clear
 header
@@ -132,24 +214,7 @@ EOF
   container_name="tdarr"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "\t container not present"
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull ghcr.io/haveagitgat/tdarr
@@ -189,6 +254,21 @@ EOF
   clear
 }
 
+# bazarr - Update and initialise the Bazarr Docker container
+#
+# Description: 
+#   This function updates the Docker image for the Bazarr container, stops and removes any
+#   existing containers with the same name, then initialises a new container with the updated
+#   image. It uses the global variables $PUID, $PGID, $TZ, and $RESTART_POLICY to configure
+#   the container. It also displays messages to indicate the progress of the update and 
+#   initialisation processes, and prompts the user to press any key to continue after the
+#   processes are complete.
+#
+# Usage:
+#   bazarr
+#
+# Returns:
+#   None.
 bazarr() {
 clear
 header
@@ -201,6 +281,8 @@ EOF
 
   container_name="bazarr"
   container_id=$(docker ps -a -q --filter name=$container_name)
+
+  stop_and_remove_container $container_name $container_id
 
   if [ ! -z "$container_id" ]; then
       echo -n "stopping $container_name container... "
@@ -218,7 +300,7 @@ EOF
           echo -e "\t [ FAIL ] $output"
       fi
   else
-      echo -e "container not present..."
+      echo -e "\t container not present"
   fi
 
   echo "pull latest $container_name image..."
@@ -244,6 +326,20 @@ EOF
   clear
 }
 
+# bitwarden - Update and initialise the Bitwarden container
+#
+# Description: 
+#   This function updates the Bitwarden container by stopping and removing it
+#   if it exists, pulling the latest image, and initialising a new container with
+#   the updated image. The container is initialised with various environment
+#   variables, port mappings, and volume mappings. The function then waits for
+#   user input before clearing the screen and returning.
+#
+# Usage:
+#   bitwarden
+#
+# Returns:
+#   None.
 bitwarden() {
   clear
   header
@@ -257,24 +353,7 @@ EOF
   container_name="bitwarden"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull vaultwarden/server:latest
@@ -306,6 +385,20 @@ EOF
   clear
 }
 
+# deluge - Update and run Deluge Docker container
+#
+# Description: 
+#   This function updates the Deluge Docker container to the latest version and
+#   starts a new container with the specified configuration. It uses the "stop_and_remove_container"
+#   function to stop and remove any existing container with the same name before
+#   starting a new one. The function also sets environment variables and mounts volumes
+#   as required for the container to function correctly. 
+#
+# Usage:
+#   deluge
+#
+# Returns:
+#   None.
 deluge() {
   clear
   header
@@ -319,24 +412,7 @@ EOF
   container_name="deluge"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull lscr.io/linuxserver/deluge:latest
@@ -364,6 +440,20 @@ EOF
   clear
 }
 
+# jackett - Update and start a Jackett Docker container
+#
+# Description: 
+#   This function updates the Docker image for Jackett and starts a new container
+#   with the specified configuration options. It uses the global variables $PUID,
+#   $PGID, $TZ, and $RESTART_POLICY to configure the container. The function also
+#   mounts a host directory to the container to store the configuration and
+#   downloads directories.
+#
+# Usage:
+#   jackett
+#
+# Returns:
+#   None.
 jackett() {
   clear
   header
@@ -377,24 +467,7 @@ EOF
   container_name="jackett"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull linuxserver/jackett
@@ -417,6 +490,22 @@ EOF
   clear
 }
 
+# jellyfin - Update and initialize the Jellyfin Docker container
+#
+# Description: 
+#   This function updates the Jellyfin Docker container to the latest version,
+#   and initializes a new container with the updated image. It stops and removes
+#   any existing container with the name "jellyfin", and then pulls the latest
+#   "jellyfin/jellyfin" image from Docker Hub. It initializes the new container
+#   with the necessary environment variables and volume mounts, and exposes the
+#   necessary ports for Jellyfin to function. It also sets up the necessary GPU
+#   device mappings for NVIDIA hardware acceleration, if available.
+#
+# Usage:
+#   jellyfin
+#
+# Returns:
+#   None.
 jellyfin() {
   clear
   header
@@ -430,24 +519,7 @@ EOF
   container_name="jellyfin"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   #docker pull linuxserver/jellyfin
@@ -485,6 +557,23 @@ EOF
   clear
 }
 
+# jellyseerr - Update and run the Jellyseerr container
+#
+# Description: 
+#   This function updates the Jellyseerr container to the latest version and runs
+#   it with the specified configuration and environment variables. It first stops
+#   and removes any existing container with the same name to avoid conflicts. It
+#   then pulls the latest image from Docker Hub and initializes the container
+#   with the specified configuration and environment variables. Once the container
+#   is running, the function displays a message indicating that the process is
+#   finished and prompts the user to press any key to continue. Finally, the screen
+#   is cleared and the function returns.
+#
+# Usage:
+#   jellyseerr
+#
+# Returns:
+#   None.
 jellyseerr() {
   clear
   header
@@ -498,24 +587,7 @@ EOF
   container_name="jellyseerr"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull fallenbagel/jellyseerr:latest
@@ -538,6 +610,21 @@ EOF
   clear
 }
 
+# omada - Update and start the Omada-Controller container
+#
+# Description: 
+#   This function updates and starts the Omada-Controller container. It uses
+#   the global variable "TZ" to set the container's timezone. It also maps
+#   the container's ports to the host and mounts the container's data,
+#   work, and log directories to the host's file system. Finally, it uses
+#   the "stop_and_remove_container" function to stop and remove any existing
+#   container with the same name before starting a new one.
+#
+# Usage:
+#   omada
+#
+# Returns:
+#   None.
 omada() {
   clear
   header
@@ -551,24 +638,7 @@ EOF
   container_name="omada-controller"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull mbentley/omada-controller:latest
@@ -613,6 +683,19 @@ EOF
   clear
 }
 
+# portainer - Update and initialize the Portainer container
+#
+# Description:
+#   This function updates and initializes the Portainer container. It first
+#   stops and removes any existing container with the same name, then pulls
+#   the latest Portainer image and initializes a new container with the
+#   specified configuration.
+#
+# Usage:
+#   portainer
+#
+# Returns:
+#   None.
 portainer() {
   clear
   header
@@ -626,24 +709,7 @@ EOF
   container_name="portainer"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull portainer/portainer-ce
@@ -667,6 +733,19 @@ EOF
   clear
 }
 
+# radarr - Update and run Radarr container
+#
+# Description: 
+#   This function updates the Radarr container by pulling the latest image and
+#   starting a new container with the specified configurations. It uses the
+#   global variables "PUID", "PGID", "TZ", and "RESTART_POLICY" to set the
+#   container environment variables and options.
+#
+# Usage:
+#   radarr
+#
+# Returns:
+#   None.
 radarr() {
   clear
   header
@@ -680,24 +759,7 @@ EOF
   container_name="radarr"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull linuxserver/radarr
@@ -721,6 +783,18 @@ EOF
   clear
 }
 
+# rtorrent - Update and initialize a docker container with RuTorrent
+#
+# Description:
+#   This function updates and initializes a docker container running RuTorrent
+#   with recommended settings. The container is based on the "crazymax"
+#   version, as recommended by "linuxserver.io".
+#
+# Usage:
+#   rtorrent
+#
+# Returns:
+#   None.
 rtorrent () {
   clear
   header
@@ -734,24 +808,7 @@ EOF
   container_name="rtorrent_crazymax"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   ## ===========================================
   ## k44sh version, fork of crazy max (think so)
@@ -832,6 +889,19 @@ EOF
   clear
 }
 
+# sonarr - Update and start a Sonarr Docker container
+#
+# Description:
+#   This function updates the Sonarr Docker container and starts it with the
+#   specified configuration. It also creates a symlink between the Sonarr
+#   container's torrent directory and the /downloads directory for easier
+#   access. The function uses the LinuxServer.io image of Sonarr.
+#
+# Usage:
+#   sonarr
+#
+# Returns:
+#   None.
 sonarr() {
   clear
   header
@@ -845,24 +915,7 @@ EOF
   container_name="sonarr"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull linuxserver/sonarr
@@ -896,6 +949,19 @@ EOF
   clear
 }
 
+# tmm - Update and initialize the TinyMediaManager Docker container
+#
+# Description:
+#   This function updates the TinyMediaManager Docker container to the latest
+#   version, and then initializes it with the specified configuration and volume
+#   mappings. This container is used to manage and organize media files, such as
+#   movies and TV shows.
+#
+# Usage:
+#   tmm
+#
+# Returns:
+#   None.
 tmm() {
   clear
   header
@@ -909,24 +975,7 @@ EOF
   container_name="tmm"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull romancin/tinymediamanager:latest-v4
@@ -951,6 +1000,18 @@ EOF
   clear
 }
 
+# qbittorrent - Update and initialise the qbittorrent Docker container
+#
+# Description:
+#   This function updates the qbittorrent Docker container to the latest version
+#   or a specific version, depending on which image is pulled. It then initialises
+#   the container with the necessary environment variables, volumes and port mappings.
+#
+# Usage:
+#   qbittorrent
+#
+# Returns:
+#   None.
 qbittorrent() {
   clear
   header
@@ -964,24 +1025,7 @@ EOF
   container_name="qbittorrent"
   container_id=$(docker ps -a -q --filter name=$container_name)
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "container not present..."
-  fi
+  stop_and_remove_container $container_name $container_id
 
   echo "pull latest $container_name image..."
   docker pull linuxserver/qbittorrent
@@ -1015,6 +1059,17 @@ EOF
   clear
 }
 
+# update_group - Update the default group of applications
+#
+# Description:
+#   This function updates the default group of applications by calling each function
+#   in the group
+#
+# Usage:
+#   update_group
+#
+# Returns:
+#   None.
 update_group() {
   # Turn user request to continue off
   #PAUSE=0
@@ -1028,6 +1083,19 @@ update_group() {
   #PAUSE=1
 }
 
+
+# main - The main function that displays the menu and handles user input
+#
+# Description:
+#   This function is the main entry point of the script. It displays a menu of options to the user and
+#   prompts for input. It then processes the user's input and either executes the corresponding function,
+#   or prints an error message if the input is invalid.
+#
+# Usage:
+#   main
+#
+# Returns:
+#   None.
 main() {
   menu
   while :
