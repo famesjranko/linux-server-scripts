@@ -19,13 +19,30 @@ PGID='SET PGID'
 TZ='SET/TIMEZONE'
 RESTART_POLICY='unless-stopped'
 
+# Set container config base directory
+DOCKER_HOME="/srv/docker"
+
+# Set media/torrent paths
+MEDIA_DIR="/data/media"
+DEFAULT_TORRENT_DIR="/data/torrents"
+PRIVATE_TORRENT_DIR"/data/torrents_private"
+
 # Set bitwarden security token
 BITWARDEN_TOKEN=
+
+# Create array of default container functions to call at once if desired
+#
+# container names = function names for specfified container
+default_group=("bitwarden" "jackett" "jellyfin" "jellyseerr" "radarr" "sonarr" "omada")
 
 # Set whether to pause after container build or not (1=yes)
 PAUSE=1
 
-# Set menu options key/value store
+# Set menu options key/value store for use in menu to call
+# relevant functions.
+#
+# Key   = menu choice
+# Value = function name 
 declare -A options=(
   ["1"]="bazarr"
   ["2"]="bitwarden"
@@ -46,9 +63,6 @@ declare -A options=(
   ["D"]="dir_struct"
   ["d"]="dir_struct"
 )
-
-# Create array of default containers
-default_group=("bitwarden" "jackett" "jellyfin" "jellyseerr" "radarr" "sonarr" "omada")
 
 # dir_struct - Display directory structure and permissions
 #
@@ -128,6 +142,8 @@ menu() {
   echo -e "\n  (q) quit\n"
 }
 
+# This function prints the final message of the Docker update script
+# and shows the list of all running containers
 final_print() {
   clear
   cat<< "EOF"
@@ -142,6 +158,8 @@ EOF
   docker ps --format "table {{.ID}}: \t{{.Names}} \t{{.RunningFor}} \t{{.Status}}"
 }
 
+# This function pauses the script and waits for user input before
+# continuing, if PAUSE variable is set to 1
 pause() {
   if [ $PAUSE -eq 1 ]
     then
@@ -222,11 +240,11 @@ EOF
   echo "initialise $container_name container..."
   docker run -d \
     --name=tdarr \
-    -v /srv/docker/tdarr/server:/app/server \
-    -v /srv/docker/tdarr/configs:/app/configs \
-    -v /srv/docker/tdarr/logs:/app/logs \
-    -v /srv/docker/tdarr/transcode_cache:/temp \
-    -v /data/media/:/media \
+    -v $DOCKER_HOME/tdarr/server:/app/server \
+    -v $DOCKER_HOME/tdarr/configs:/app/configs \
+    -v $DOCKER_HOME/tdarr/logs:/app/logs \
+    -v $DOCKER_HOME/tdarr/transcode_cache:/temp \
+    -v $MEDIA_DIR:/media \
     -e serverIP=0.0.0.0 \
     -e serverPort=8266 \
     -e webUIPort=8265 \
@@ -284,25 +302,6 @@ EOF
 
   stop_and_remove_container $container_name $container_id
 
-  if [ ! -z "$container_id" ]; then
-      echo -n "stopping $container_name container... "
-      output=$(docker stop $container_name)
-      if [ "$output" == "$container_name" ]; then
-          echo -e "\t [ SUCCESS ]"
-          echo -n "removing $container_name container... "
-          output=$(docker rm $container_name)
-          if [ "$output" == "$container_name" ]; then
-              echo -e "\t [ SUCCESS ]"
-          else
-              echo -e "\t [ FAIL ] $output"
-          fi
-      else
-          echo -e "\t [ FAIL ] $output"
-      fi
-  else
-      echo -e "\t container not present"
-  fi
-
   echo "pull latest $container_name image..."
   docker pull ghcr.io/linuxserver/bazarr
 
@@ -314,9 +313,9 @@ EOF
     -e TZ=$TZ \
     -e UMASK_SET=022 \
     -p 6767:6767 \
-    -v /srv/docker/bazarr/config:/config \
-    -v /data/media/movies:/data/media/movies \
-    -v /data/media/television:/data/media/television \
+    -v $DOCKER_HOME/bazarr/config:/config \
+    -v $MEDIA_DIR/movies:/data/media/movies \
+    -v $MEDIA_DIR/television:/data/media/television \
     --restart=$RESTART_POLICY \
     ghcr.io/linuxserver/bazarr
 
@@ -375,7 +374,7 @@ EOF
     -e ROCKET_PORT=8080 \
     -p 8343:8080 \
     -p 3012:3012 \
-    -v /srv/docker/bitwarden/data/:/data/ \
+    -v $DOCKER_HOME/bitwarden/data/:/data/ \
     --restart=$RESTART_POLICY \
     vaultwarden/server:latest
 
@@ -428,9 +427,9 @@ EOF
     -p 8112:8112 \
     -p 60401:60401 \
     -p 60401:60401/udp \
-    -v /srv/docker/deluge/config:/config \
-    -v /data/torrents:/data/torrents \
-    -v /data/torrents_private:/data/torrents_private \
+    -v $DOCKER_HOME/deluge/config:/config \
+    -v $DEFAULT_TORRENT_DIR:/data/torrents \
+    -v $PRIVATE_TORRENT_DIR:/data/torrents_private \
     --restart=$RESTART_POLICY \
     lscr.io/linuxserver/deluge:latest
 
@@ -479,8 +478,8 @@ EOF
     -e PGID=$PGID \
     -e TZ=$TZ \
     -p 9117:9117 \
-    -v /srv/docker/jackett/config:/config \
-    -v /data/torrents/jackett:/downloads \
+    -v $DOCKER_HOME/jackett/config:/config \
+    -v $DEFAULT_TORRENT_DIR/jackett:/downloads \
     --restart=$RESTART_POLICY \
     linuxserver/jackett
 
@@ -539,12 +538,12 @@ EOF
     -e UMASK_SET=002 \
     -p 8096:8096 \
     -p 8920:8920 \
-    -v /data/media/television:/data/tvshows \
-    -v /data/media/movies:/data/movies \
-    -v /srv/docker/jellyfin/config:/config \
-    -v /srv/docker/jellyfin/cache:/cache \
-    -v /srv/docker/jellyfin/transcode:/transcode \
-    -v /srv/docker/jellyfin/dist:/jellyfin/jellyfin-web \
+    -v $MEDIA_DIR/television:/data/tvshows \
+    -v $MEDIA_DIR/movies:/data/movies \
+    -v $DOCKER_HOME/jellyfin/config:/config \
+    -v $DOCKER_HOME/jellyfin/cache:/cache \
+    -v $DOCKER_HOME/jellyfin/transcode:/transcode \
+    -v $DOCKER_HOME/jellyfin/dist:/jellyfin/jellyfin-web \
     --device /dev/dri/renderD128:/dev/dri/renderD128 \
     --device /dev/dri/card0:/dev/dri/card0 \
     --restart=$RESTART_POLICY \
@@ -600,7 +599,7 @@ EOF
     -e PGID=$PGID \
     -e TZ=$TZ \
     -p 5055:5055 \
-    -v /srv/docker/jellyseerr/config:/app/config \
+    -v $DOCKER_HOME/jellyseerr/config:/app/config \
     --restart=$RESTART_POLICY \
     fallenbagel/jellyseerr:latest
 
@@ -671,10 +670,10 @@ EOF
     -e SHOW_MONGODB_LOGS=false \
     -e SSL_CERT_NAME="tls.crt" \
     -e SSL_KEY_NAME="tls.key" \
-    -v /srv/docker/omada/data:/opt/tplink/EAPController/data \
-    -v /srv/docker/omada/work:/opt/tplink/EAPController/work \
-    -v /srv/docker/omada/logs:/opt/tplink/EAPController/logs \
-        --restart=$RESTART_POLICY \
+    -v $DOCKER_HOME/omada/data:/opt/tplink/EAPController/data \
+    -v $DOCKER_HOME/omada/work:/opt/tplink/EAPController/work \
+    -v $DOCKER_HOME/omada/logs:/opt/tplink/EAPController/logs \
+    --restart=$RESTART_POLICY \
     mbentley/omada-controller:latest
 
   echo
@@ -723,8 +722,8 @@ EOF
     -p 8000:8000 \
     -p 9000:9000 \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v /srv/docker/portainer:/data \
-        --restart=$RESTART_POLICY \
+    -v $DOCKER_HOME/portainer:/data \
+    --restart=$RESTART_POLICY \
     portainer/portainer-ce
 
   echo
@@ -772,7 +771,7 @@ EOF
     -e TZ=$TZ \
     -e UMASK_SET=002 \
     -p 7878:7878 \
-    -v /srv/docker/radarr/config:/config \
+    -v $DOCKER_HOME/radarr/config:/config \
     -v /data:/data \
     --restart=$RESTART_POLICY \
     linuxserver/radarr
@@ -856,10 +855,10 @@ EOF
     -p 8085:8080 \
     -p 9100:9000 \
     -p 60402:60402 \
-    -v /srv/docker/rtorrent_crazymax/data:/data \
-    -v /srv/docker/rtorrent_crazymax/passwd:/passwd \
-    -v /data/torrents:/data/torrents \
-    -v /data/torrents_private:/data/torrents_private \
+    -v $DOCKER_HOME/rtorrent_crazymax/data:/data \
+    -v $DOCKER_HOME/rtorrent_crazymax/passwd:/passwd \
+    -v $DEFAULT_TORRENT_DIR:/data/torrents \
+    -v $PRIVATE_TORRENT_DIR:/data/torrents_private \
     --restart=$RESTART_POLICY \
     crazymax/rtorrent-rutorrent:latest
 
@@ -928,7 +927,7 @@ EOF
     -e TZ=$TZ \
     -e UMASK_SET=002 \
     -p 8989:8989 \
-    -v /srv/docker/sonarr/config:/config \
+    -v $DOCKER_HOME/sonarr/config:/config \
     -v /data:/data \
     --restart=$RESTART_POLICY \
     linuxserver/sonarr
@@ -986,10 +985,10 @@ EOF
     -e TZ=$TZ \
     -e PUID=$PUID \
     -e PGID=$PGID \
-    -v /srv/docker/tinymediamanager/config:/config \
-    -v /data/media/movies:/data/media/movies \
-    -v /data/media/television:/data/media/television \
-    -v /data/torrents:/data/torrents \
+    -v $DOCKER_HOME/tinymediamanager/config:/config \
+    -v $MEDIA_DIR/movies:/data/media/movies \
+    -v $MEDIA_DIR/television:/data/media/television \
+    -v $DEFAULT_TORRENT_DIR:/data/torrents \
     -p 5800:5800 \
     --restart=$RESTART_POLICY \
     romancin/tinymediamanager:latest-v4
@@ -1042,9 +1041,9 @@ EOF
     -p 60402:60402 \
     -p 60402:60402/udp \
     -p 8081:8081 \
-    -v /srv/docker/qbittorrent/config:/config \
-    -v /data/torrents:/data/torrents \
-    -v /data/torrents_private:/data/torrents_private \
+    -v $DOCKER_HOME/qbittorrent/config:/config \
+    -v $DEFAULT_TORRENT_DIR:/data/torrents \
+    -v $PRIVATE_TORRENT_DIR:/data/torrents_private \
     --restart=$RESTART_POLICY \
     linuxserver/qbittorrent
 
