@@ -1,0 +1,9 @@
+# Runtime logs and local databases
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated local outputs
+temp_graph.log
+net-speed_readable.log
