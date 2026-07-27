@@ -14,6 +14,9 @@
 ## The script will loop for ~10mins or all containers are running.
 ## =================================================================
 
+# NOTE: public template. Update required/container_group for your stack before
+# installing as a startup helper.
+
 script_name="S-R-J-J STARTUP"
 
 # set required container

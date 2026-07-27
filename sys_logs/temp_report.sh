@@ -12,6 +12,9 @@
 #            4. 'sqlite3' for database
 ## ===================================================
 
+# NOTE: public template. Set LOCATION and DATABASE_FILE for your host. Generated
+# .log/.db files are intentionally ignored by git.
+
 # Get system date
 DATE=$(date "+%D - %T")
 

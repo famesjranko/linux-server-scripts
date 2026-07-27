@@ -9,6 +9,9 @@
 
 #!/bin/bash
 
+# NOTE: public template. Review /mnt/backup_usb, /srv/media, exclusions, and Docker
+# behavior before use. This stops all Docker containers when DOCKER=true.
+
 ## backup drive mount point
 DIR='/mnt/backup_usb '
 

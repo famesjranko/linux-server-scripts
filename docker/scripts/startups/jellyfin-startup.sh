@@ -23,6 +23,9 @@
 ## restart to be used.
 ## =======================================================================
 
+# NOTE: public template. Update container name, mount test file, and log path
+# before installing as a startup helper.
+
 # Set the script name for echo logging
 script_name="JELLYFIN STARTUP"
 

@@ -11,6 +11,9 @@
 
 #!/bin/bash
 
+# NOTE: public template. Review /mnt/backup_usb, /srv/media, exclusions, and Docker
+# behavior before use. This stops all Docker containers.
+
 echo "== running backup script =="
 
 ## collect a list of installed packages

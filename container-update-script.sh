@@ -15,6 +15,9 @@ cat<< "EOF"
 EOF
 }
 
+# NOTE: public template. Replace placeholder PUID/PGID/TZ and volume paths before
+# running. This script removes and recreates named containers.
+
 dir_struct () {
 cat<< "EOF"
   Directory Structure:

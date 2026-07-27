@@ -13,6 +13,9 @@
 # Sharing here in case it is helpful to anyone else who prefers docker-cli to compose.
 # =====================================================================================
 
+# NOTE: public template. Set PUID, PGID, TZ, BITWARDEN_TOKEN, DOCKER_HOME, and
+# media/torrent paths before use. This script removes and recreates containers.
+
 # Set global container variables
 PUID='1000'
 PGID='1000'

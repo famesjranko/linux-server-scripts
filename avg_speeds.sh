@@ -1,6 +1,7 @@
 ## this script gets takes network internet speeds
 ## from a log file and returns the average speeds
 ## of download, upload and latency.
+## NOTE: update INPUT for your own speedtest log path.
 
 #!/bin/bash
 

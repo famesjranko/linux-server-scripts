@@ -20,6 +20,9 @@
 ## exit the loop if it is.
 ## =====================================================================
 
+# NOTE: public template. Update container name, mount test file, and network
+# check settings before installing as a startup helper.
+
 script_name="TORRENT STARTUP"
 
 # set mount point and testfile

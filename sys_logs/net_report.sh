@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# NOTE: public template. Generated .log/.db files are intentionally ignored by
+# git; change DATABASE_FILE if you do not want /var/lib/server-scripts.
+
 ## ======================================
 ##  Run a network speed test
 ## ======================================
